@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gleamward — Seven Nights of Light</title>
+<meta name="description" content="Gleamward is a light-beam defense game: bend a lantern's beam off mirror shards to burn back seven nights of shadows.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="wrap">
+  <header id="masthead">
+    <h1>GLEAMWARD</h1>
+    <p class="tagline">Seven nights. One beam of light. Hold the hearth.</p>
+  </header>
+
+  <div id="stage">
+    <canvas id="game" width="960" height="600"></canvas>
+
+    <div id="title-screen" class="overlay">
+      <div class="panel">
+        <h2>Gleamward</h2>
+        <p class="pitch">
+          The dark sends its shadows for your hearth, seven nights running.
+          Your only weapon is light itself: drag the mirror shards, twist
+          them, and bend the lantern's beam into a burning web the shadows
+          must cross.
+        </p>
+        <ul class="controls">
+          <li><strong>Drag</strong> a mirror to move it</li>
+          <li><strong>Mouse wheel</strong>, <strong>Q / E</strong>, or the rotate buttons to turn the selected mirror</li>
+          <li><strong>Drag the lantern</strong> (or A / D) to aim the beam</li>
+          <li><strong>F</strong> flares the beam (5 embers, double damage, brief surge)</li>
+          <li><strong>P</strong> pauses · Shadows that burn drop embers — spend them at dawn</li>
+        </ul>
+        <button id="btn-start" class="big-btn">Light the Hearth</button>
+      </div>
+    </div>
+
+    <div id="shop" class="overlay hidden">
+      <div class="panel">
+        <h2>Night <span id="shop-night">1</span> held</h2>
+        <p id="shop-msg" class="pitch">The hearth still burns.</p>
+        <p class="embers-line">Embers to spend: <strong id="shop-embers">0</strong></p>
+        <div class="shop-grid">
+          <button class="up" data-up="mirror">
+            <span class="up-name">New Mirror Shard <span class="up-lvl"></span></span>
+            <span class="up-blurb">One more mirror to bend the beam with.</span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="up" data-up="power">
+            <span class="up-name">Hotter Flame <span class="up-lvl"></span></span>
+            <span class="up-blurb">+35% beam burn damage.</span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="up" data-up="width">
+            <span class="up-name">Wider Beam <span class="up-lvl"></span></span>
+            <span class="up-blurb">+3 beam thickness. Easier to hold shadows in the light.</span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="up" data-up="lens">
+            <span class="up-name">Polished Lens <span class="up-lvl"></span></span>
+            <span class="up-blurb">+1 reflection and +350 beam reach.</span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="up" data-up="plating">
+            <span class="up-name">Hearth Plating <span class="up-lvl"></span></span>
+            <span class="up-blurb">+25 max hearth health and mend 40 now.</span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="up" data-up="frost">
+            <span class="up-name">Frost Charm <span class="up-lvl"></span></span>
+            <span class="up-blurb">All shadows creep 8% slower.</span>
+            <span class="up-cost"></span>
+          </button>
+          <button class="up" data-up="repair">
+            <span class="up-name">Kindle the Hearth <span class="up-lvl"></span></span>
+            <span class="up-blurb">Mend 30 hearth health right away.</span>
+            <span class="up-cost"></span>
+          </button>
+        </div>
+        <button id="btn-next" class="big-btn">Begin Night <span id="next-night">2</span></button>
+      </div>
+    </div>
+
+    <div id="end-screen" class="overlay hidden">
+      <div class="panel">
+        <h2 id="end-title">Dawn breaks</h2>
+        <p id="end-text" class="pitch"></p>
+        <button id="btn-restart" class="big-btn">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ctl">
+    <button id="btn-rot-l" title="Rotate selected mirror counter-clockwise">⟲ Rotate</button>
+    <button id="btn-rot-r" title="Rotate selected mirror clockwise">Rotate ⟳</button>
+    <button id="btn-flare" title="Flare the beam (F) — 5 embers">Flare 🔥</button>
+    <button id="btn-pause" title="Pause (P)">Pause</button>
+  </div>
+
+  <footer>
+    <p>A tiny game of mirrors and lamplight. Vanilla JavaScript + Canvas 2D — no libraries, no build step. Just open <code>index.html</code>.</p>
+  </footer>
+</main>
+
+<script src="js/beam.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
