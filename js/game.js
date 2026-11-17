@@ -316,3 +316,296 @@
       })(upButtons[i]);
     }
   }
+
+  // ------------------------------------------------------------ nights
+  /*
+   * Build one night's spawn schedule from the seeded RNG. Composition
+   * shifts as nights deepen: swifts join on night 2, wisps on night 3,
+   * brutes on night 4, and from night 3 shadows also slip in from the
+   * top and bottom edges so a single horizontal beam stops being enough.
+   */
+  function buildNight(night) {
+    var rng = mulberry32(RUN_SEED + night * 7919);
+    var count = 10 + night * 4;
+    var interval = Math.max(0.42, 1.45 - night * 0.13);
+    var hpScale = 1 + (night - 1) * 0.38;
+    var queue = [];
+    var at = 1.2;
+    for (var i = 0; i < count; i++) {
+      var roll = rng();
+      var type = 'shade';
+      if (night >= 4 && roll > 0.9) type = 'brute';
+      else if (night >= 3 && roll > 0.76) type = 'wisp';
+      else if (night >= 2 && roll > 0.58) type = 'swift';
+      var edge = 'right';
+      if (night >= 3) {
+        var er = rng();
+        if (er > 0.82) edge = 'top';
+        else if (er > 0.64) edge = 'bottom';
+      }
+      var spec = TYPES[type];
+      queue.push({
+        at: at,
+        type: type,
+        edge: edge,
+        lane: rng(),
+        hp: spec.hp * hpScale * (0.9 + rng() * 0.25),
+        speedJitter: 0.88 + rng() * 0.24,
+        phase: rng() * 6.28
+      });
+      at += interval * (0.65 + rng() * 0.7);
+    }
+    return queue;
+  }
+
+  function spawnOne(item) {
+    var spec = TYPES[item.type];
+    var c = {
+      type: item.type,
+      x: 0, y: 0,
+      hp: item.hp,
+      maxHp: item.hp,
+      speed: spec.speed * item.speedJitter,
+      r: spec.r,
+      dmg: spec.dmg,
+      embers: spec.embers,
+      phase: item.phase,
+      burning: 0,
+      wobbleAmp: item.type === 'wisp' ? 46 : 14
+    };
+    if (item.edge === 'right') {
+      c.x = W + 26;
+      c.y = 44 + item.lane * (H - 88);
+    } else if (item.edge === 'top') {
+      c.x = W * 0.45 + item.lane * (W * 0.55);
+      c.y = -26;
+    } else {
+      c.x = W * 0.45 + item.lane * (W * 0.55);
+      c.y = H + 26;
+    }
+    G.creatures.push(c);
+  }
+
+  function startNight(night) {
+    G.night = night;
+    G.mode = 'play';
+    G.paused = false;
+    G.creatures = [];
+    G.particles = [];
+    G.floaters = [];
+    G.spawnQueue = buildNight(night);
+    G.spawnTimer = 0;
+    G.banner = night === 1 ? 'Night 1 — the dark comes creeping' : 'Night ' + night;
+    G.bannerUntil = G.time + 2.6;
+  }
+
+  function nightCleared() {
+    var bonus = 4 + G.night * 2;
+    G.embers += bonus;
+    if (G.night >= NIGHTS_TOTAL) {
+      endGame(true);
+      return;
+    }
+    G.mode = 'shop';
+    el.shopMsg.textContent = 'The hearth still burns. Dawn bonus: +' + bonus + ' embers.';
+    refreshShop();
+    show(el.shop, true);
+  }
+
+  function endGame(won) {
+    G.mode = won ? 'win' : 'lose';
+    el.endTitle.textContent = won ? 'Dawn breaks — you held the light' : 'The hearth has gone dark';
+    el.endText.textContent = won
+      ? 'Seven nights, and the Gleamward still shines. Shadows burned: ' + G.kills +
+        '. Embers unspent: ' + G.embers + '.'
+      : 'The dark took the hearth on night ' + G.night + '. Shadows burned: ' + G.kills +
+        ', shadows that slipped through: ' + G.leaked + '.';
+    show(el.end, true);
+  }
+
+  // -------------------------------------------------------------- shop
+  function refreshShop() {
+    el.shopNight.textContent = String(G.night);
+    el.nextNight.textContent = String(G.night + 1);
+    el.shopEmbers.textContent = String(G.embers);
+    var buttons = document.querySelectorAll('.up');
+    for (var i = 0; i < buttons.length; i++) {
+      var key = buttons[i].getAttribute('data-up');
+      var u = UPGRADES[key];
+      var lvl = G.levels[key];
+      var costSpan = buttons[i].querySelector('.up-cost');
+      var lvlSpan = buttons[i].querySelector('.up-lvl');
+      if (lvl >= u.max) {
+        if (costSpan) costSpan.textContent = 'MAX';
+        buttons[i].disabled = true;
+      } else {
+        var cost = upgradeCost(key);
+        if (costSpan) costSpan.textContent = cost + ' embers';
+        buttons[i].disabled = G.embers < cost;
+      }
+      if (lvlSpan) lvlSpan.textContent = lvl > 0 ? 'Lv ' + lvl : '';
+    }
+  }
+
+  function buy(key) {
+    if (G.mode !== 'shop') return;
+    var u = UPGRADES[key];
+    if (!u || G.levels[key] >= u.max) return;
+    var cost = upgradeCost(key);
+    if (G.embers < cost) return;
+    G.embers -= cost;
+    G.levels[key]++;
+
+    if (key === 'mirror') {
+      var spots = [[620, 180], [700, 330], [560, 520], [790, 150]];
+      var s = spots[(G.levels.mirror - 1) % spots.length];
+      G.mirrors.push({ x: s[0], y: s[1], angle: -Math.PI / 4, half: 27 });
+      G.selected = G.mirrors.length - 1;
+    } else if (key === 'plating') {
+      G.hearthMax += 25;
+      G.hearthHp = Math.min(G.hearthMax, G.hearthHp + 40);
+    } else if (key === 'repair') {
+      G.hearthHp = Math.min(G.hearthMax, G.hearthHp + 30);
+    }
+    refreshShop();
+  }
+
+  // ------------------------------------------------------------- update
+  function burst(x, y, color, n, speed) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * 6.283;
+      var v = (0.3 + Math.random() * 0.7) * speed;
+      G.particles.push({
+        x: x, y: y,
+        vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        life: 0.5 + Math.random() * 0.5, maxLife: 1,
+        color: color, size: 1.5 + Math.random() * 2.5
+      });
+    }
+  }
+
+  function floater(x, y, text) {
+    G.floaters.push({ x: x, y: y, text: text, life: 1.1 });
+  }
+
+  function update(dt) {
+    // Aim keys nudge the lantern even while dragging mirrors around.
+    if (keys['a'] || keys['arrowleft']) G.aim -= 1.5 * dt;
+    if (keys['d'] || keys['arrowright']) G.aim += 1.5 * dt;
+    if (keys['q']) rotateSelected(-1.9 * dt);
+    if (keys['e']) rotateSelected(1.9 * dt);
+
+    // The beam is re-traced every frame from the live mirror layout.
+    G.beam = BM.trace(LANTERN.x, LANTERN.y, G.aim, G.mirrors, {
+      width: W, height: H, maxLength: maxBeamLen(), maxBounces: maxBounces()
+    });
+    G.litMirrors = G.beam.mirrorHits;
+
+    if (G.mode !== 'play' || G.paused) {
+      updateFx(dt);
+      return;
+    }
+
+    // Spawning.
+    G.spawnTimer += dt;
+    while (G.spawnQueue.length && G.spawnQueue[0].at <= G.spawnTimer) {
+      spawnOne(G.spawnQueue.shift());
+    }
+
+    var dps = beamDps();
+    var halfW = beamHalfWidth();
+    var slow = frostMult();
+    var survivors = [];
+
+    for (var i = 0; i < G.creatures.length; i++) {
+      var c = G.creatures[i];
+
+      // Creep toward the hearth with a sideways wobble.
+      var dx = HEARTH.x - c.x;
+      var dy = HEARTH.y - c.y;
+      var dist = Math.hypot(dx, dy) || 1;
+      var px = -dy / dist;
+      var py = dx / dist;
+      var wob = Math.sin(G.time * 1.7 + c.phase) * c.wobbleAmp;
+      var vx = (dx / dist) * c.speed * slow + px * wob * 0.55;
+      var vy = (dy / dist) * c.speed * slow + py * wob * 0.55;
+      c.x += vx * dt;
+      c.y += vy * dt;
+
+      // Burn check against every beam segment.
+      c.burning = 0;
+      for (var s = 0; s < G.beam.segments.length; s++) {
+        var seg = G.beam.segments[s];
+        var d = BM.pointSegment(c.x, c.y, seg[0][0], seg[0][1], seg[1][0], seg[1][1]).dist;
+        if (d < c.r + halfW) { c.burning = 1; break; }
+      }
+      if (c.burning) {
+        c.hp -= dps * dt;
+        if (Math.random() < 0.35) {
+          G.particles.push({
+            x: c.x + (Math.random() - 0.5) * c.r,
+            y: c.y + (Math.random() - 0.5) * c.r,
+            vx: (Math.random() - 0.5) * 22, vy: -18 - Math.random() * 26,
+            life: 0.4 + Math.random() * 0.3, maxLife: 0.7,
+            color: '#ffb347', size: 1.4 + Math.random() * 2
+          });
+        }
+      }
+
+      if (c.hp <= 0) {
+        G.kills++;
+        G.embers += c.embers;
+        floater(c.x, c.y - c.r - 4, '+' + c.embers);
+        burst(c.x, c.y, '#ffcf7d', 10, 90);
+        continue;
+      }
+
+      // Reached the hearth: it bites, and is gone.
+      if (dist < HEARTH.r + 6) {
+        G.leaked++;
+        G.hearthHp -= c.dmg;
+        G.flash = 0.45;
+        burst(HEARTH.x + 18, HEARTH.y, '#ff6b5e', 14, 120);
+        if (G.hearthHp <= 0) {
+          G.hearthHp = 0;
+          endGame(false);
+        }
+        continue;
+      }
+
+      survivors.push(c);
+    }
+    G.creatures = survivors;
+
+    updateFx(dt);
+
+    if (G.mode === 'play' && !G.spawnQueue.length && G.creatures.length === 0) {
+      nightCleared();
+    }
+  }
+
+  function updateFx(dt) {
+    var keep = [];
+    for (var i = 0; i < G.particles.length; i++) {
+      var p = G.particles[i];
+      p.life -= dt;
+      if (p.life <= 0) continue;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+      keep.push(p);
+    }
+    G.particles = keep;
+
+    var fk = [];
+    for (var j = 0; j < G.floaters.length; j++) {
+      var f = G.floaters[j];
+      f.life -= dt;
+      f.y -= 26 * dt;
+      if (f.life > 0) fk.push(f);
+    }
+    G.floaters = fk;
+
+    if (G.flash > 0) G.flash = Math.max(0, G.flash - dt);
+  }
