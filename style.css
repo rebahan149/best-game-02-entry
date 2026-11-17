@@ -1,0 +1,254 @@
+/* Gleamward — dark lamplight theme. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #05060f;
+  color: #e8e2cf;
+  font-family: Georgia, 'Times New Roman', serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#wrap {
+  width: min(1000px, 100%);
+  padding: 18px 16px 30px;
+}
+
+#masthead {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+#masthead h1 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0.35em;
+  color: #ffe9b8;
+  text-shadow: 0 0 22px rgba(255, 179, 71, 0.55);
+}
+
+.tagline {
+  margin: 4px 0 0;
+  color: #9aa3c7;
+  font-style: italic;
+  font-size: 15px;
+}
+
+#stage {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+canvas#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #0a0d1f;
+  border: 1px solid #35304f;
+  border-radius: 10px;
+  box-shadow: 0 0 42px rgba(255, 179, 71, 0.12), 0 18px 50px rgba(0, 0, 0, 0.6);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* ---------------------------------------------------------- overlays */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 5, 12, 0.66);
+  border-radius: 10px;
+  z-index: 5;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.panel {
+  width: min(620px, 92%);
+  max-height: 94%;
+  overflow-y: auto;
+  background: rgba(13, 15, 30, 0.96);
+  border: 1px solid #57492a;
+  border-radius: 12px;
+  padding: 22px 26px 24px;
+  text-align: center;
+  box-shadow: 0 0 34px rgba(255, 179, 71, 0.15);
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  color: #ffe9b8;
+  font-size: 27px;
+  letter-spacing: 0.06em;
+}
+
+.pitch {
+  color: #c9cde4;
+  line-height: 1.5;
+  margin: 6px 0 12px;
+  font-size: 15.5px;
+}
+
+.controls {
+  text-align: left;
+  margin: 0 auto 16px;
+  max-width: 480px;
+  color: #aab1d0;
+  line-height: 1.55;
+  font-size: 14.5px;
+  padding-left: 20px;
+}
+
+.controls strong {
+  color: #ffd98f;
+}
+
+.big-btn {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #241a05;
+  background: linear-gradient(180deg, #ffd98f, #f5a83d);
+  border: 1px solid #ffe9b8;
+  border-radius: 9px;
+  padding: 11px 26px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(255, 179, 71, 0.4);
+}
+
+.big-btn:hover {
+  filter: brightness(1.08);
+}
+
+.big-btn:active {
+  transform: translateY(1px);
+}
+
+/* -------------------------------------------------------------- shop */
+
+.embers-line {
+  color: #ffd98f;
+  font-size: 16px;
+  margin: 4px 0 14px;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+button.up {
+  font-family: inherit;
+  text-align: left;
+  background: #171a30;
+  color: #e8e2cf;
+  border: 1px solid #3d3a5e;
+  border-radius: 9px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+button.up:hover:not(:disabled) {
+  border-color: #f5a83d;
+  background: #1d2138;
+}
+
+button.up:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.up-name {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: #ffe9b8;
+}
+
+.up-lvl {
+  color: #9fd08a;
+  font-size: 12.5px;
+}
+
+.up-blurb {
+  font-size: 12.5px;
+  color: #aab1d0;
+  line-height: 1.35;
+}
+
+.up-cost {
+  font-size: 13px;
+  color: #ffd98f;
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------- control bar */
+
+#ctl {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+#ctl button {
+  font-family: inherit;
+  font-size: 14px;
+  background: #171a30;
+  color: #e8e2cf;
+  border: 1px solid #3d3a5e;
+  border-radius: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+
+#ctl button:hover {
+  border-color: #f5a83d;
+}
+
+footer {
+  text-align: center;
+  color: #6d7496;
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+footer code {
+  color: #ffd98f;
+}
+
+@media (max-width: 640px) {
+  #masthead h1 {
+    font-size: 24px;
+  }
+
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+}
