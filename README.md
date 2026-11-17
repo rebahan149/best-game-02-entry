@@ -43,13 +43,17 @@ hearth alive for **seven nights**.
 
 ## Run it
 
-No build step, no dependencies, no server needed — it is a static site:
+No build step, no dependencies — it is a static site with a zero-dependency
+Node entrypoint:
 
 ```sh
-# either just open the file…
+# recommended: the bundled Node server (Node >= 22, nothing to install)
+node main.ts                  # then visit http://localhost:8080
+
+# or just open the file…
 open index.html
 
-# …or serve the folder
+# …or serve the folder with Python
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
