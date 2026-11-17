@@ -609,3 +609,334 @@
 
     if (G.flash > 0) G.flash = Math.max(0, G.flash - dt);
   }
+
+  // -------------------------------------------------------------- draw
+  function draw() {
+    // Night field.
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0b1026');
+    grad.addColorStop(0.6, '#0a0d1f');
+    grad.addColorStop(1, '#070812');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars.
+    ctx.fillStyle = '#aebaff';
+    for (var i = 0; i < G.stars.length; i++) {
+      var st = G.stars[i];
+      ctx.globalAlpha = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(G.time * 0.8 + st.tw));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Ground mist bands.
+    ctx.fillStyle = 'rgba(70, 80, 140, 0.05)';
+    ctx.fillRect(0, H * 0.62, W, 46);
+    ctx.fillRect(0, H * 0.8, W, 60);
+
+    drawBeam();
+    drawHearth();
+    drawMirrors();
+    drawCreatures();
+    drawFx();
+    drawHud();
+
+    if (G.flash > 0) {
+      ctx.fillStyle = 'rgba(255, 60, 40,' + (G.flash * 0.35).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    if (G.banner && G.time < G.bannerUntil && G.mode === 'play') {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (G.bannerUntil - G.time) / 0.8);
+      ctx.font = '600 30px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffe9b8';
+      ctx.shadowColor = '#ffb347';
+      ctx.shadowBlur = 18;
+      ctx.fillText(G.banner, W / 2, 84);
+      ctx.restore();
+    }
+
+    if (G.paused && G.mode === 'play') {
+      ctx.fillStyle = 'rgba(4, 6, 14, 0.55)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = '700 34px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffe9b8';
+      ctx.fillText('PAUSED', W / 2, H / 2);
+    }
+  }
+
+  function drawBeam() {
+    if (!G.beam || G.beam.points.length < 2) return;
+    var halfW = beamHalfWidth();
+    var flick = 0.9 + 0.1 * Math.sin(G.time * 31) * Math.sin(G.time * 17.3);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Wide soft glow (fatter and brighter while flaring).
+    var flaring = G.time < G.flareUntil;
+    ctx.strokeStyle = flaring ? 'rgba(255, 150, 50, 0.22)' : 'rgba(255, 166, 66, 0.13)';
+    ctx.lineWidth = halfW * 2 + (flaring ? 26 : 16);
+    strokePath(G.beam.points);
+    // Warm body.
+    ctx.strokeStyle = 'rgba(255, 190, 92,' + (0.5 * flick).toFixed(3) + ')';
+    ctx.lineWidth = halfW * 2;
+    strokePath(G.beam.points);
+    // White-hot core.
+    ctx.strokeStyle = 'rgba(255, 246, 214,' + (0.9 * flick).toFixed(3) + ')';
+    ctx.lineWidth = Math.max(2, halfW * 0.7);
+    strokePath(G.beam.points);
+
+    // Spark at the lantern mouth.
+    ctx.fillStyle = 'rgba(255, 240, 200, 0.9)';
+    ctx.beginPath();
+    ctx.arc(LANTERN.x, LANTERN.y, 3.5 + Math.sin(G.time * 23) * 0.8, 0, 6.283);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function strokePath(points) {
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (var i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+    ctx.stroke();
+  }
+
+  function drawHearth() {
+    var pulse = 0.5 + 0.5 * Math.sin(G.time * 2.2);
+    // Light pool around the hearth.
+    var rg = ctx.createRadialGradient(HEARTH.x, HEARTH.y, 4, HEARTH.x, HEARTH.y, 120);
+    rg.addColorStop(0, 'rgba(255, 190, 100,' + (0.30 + 0.08 * pulse).toFixed(3) + ')');
+    rg.addColorStop(1, 'rgba(255, 190, 100, 0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(HEARTH.x, HEARTH.y, 120, 0, 6.283);
+    ctx.fill();
+
+    // Stone ring.
+    ctx.fillStyle = '#232038';
+    ctx.strokeStyle = '#4a4266';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(HEARTH.x, HEARTH.y, HEARTH.r, 0, 6.283);
+    ctx.fill();
+    ctx.stroke();
+
+    // The flame crystal.
+    ctx.save();
+    ctx.shadowColor = '#ffb347';
+    ctx.shadowBlur = 22 + 10 * pulse;
+    ctx.fillStyle = '#ffcf7d';
+    ctx.beginPath();
+    ctx.moveTo(HEARTH.x, HEARTH.y - 17 - 3 * pulse);
+    ctx.lineTo(HEARTH.x + 9, HEARTH.y + 8);
+    ctx.lineTo(HEARTH.x, HEARTH.y + 13);
+    ctx.lineTo(HEARTH.x - 9, HEARTH.y + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Lantern arm pointing along the aim.
+    ctx.strokeStyle = '#8d8272';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(HEARTH.x + 14, HEARTH.y);
+    ctx.lineTo(LANTERN.x, LANTERN.y);
+    ctx.stroke();
+    ctx.fillStyle = '#ffe2a8';
+    ctx.beginPath();
+    ctx.arc(LANTERN.x, LANTERN.y, 5, 0, 6.283);
+    ctx.fill();
+  }
+
+  function drawMirrors() {
+    for (var i = 0; i < G.mirrors.length; i++) {
+      var m = G.mirrors[i];
+      var e = BM.mirrorEnds(m);
+      var lit = G.litMirrors.indexOf(i) >= 0;
+      ctx.save();
+      ctx.lineCap = 'round';
+      if (i === G.selected || i === G.hovered) {
+        ctx.strokeStyle = 'rgba(255, 233, 184, 0.25)';
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.moveTo(e[0], e[1]);
+        ctx.lineTo(e[2], e[3]);
+        ctx.stroke();
+      }
+      // Backing.
+      ctx.strokeStyle = '#3a3350';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(e[0], e[1]);
+      ctx.lineTo(e[2], e[3]);
+      ctx.stroke();
+      // Reflective face.
+      ctx.strokeStyle = lit ? '#ffeec4' : '#b9c6e8';
+      ctx.shadowColor = lit ? '#ffcf7d' : 'transparent';
+      ctx.shadowBlur = lit ? 14 : 0;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(e[0], e[1]);
+      ctx.lineTo(e[2], e[3]);
+      ctx.stroke();
+      // Pivot jewel.
+      ctx.fillStyle = lit ? '#ffdf9e' : '#7f8db3';
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 3.4, 0, 6.283);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawCreatures() {
+    for (var i = 0; i < G.creatures.length; i++) {
+      var c = G.creatures[i];
+      var spec = TYPES[c.type];
+      ctx.save();
+      // Body: a soft dark blob with a faint rim.
+      var rg = ctx.createRadialGradient(c.x - c.r * 0.3, c.y - c.r * 0.3, 1, c.x, c.y, c.r * 1.25);
+      rg.addColorStop(0, '#4b3d63');
+      rg.addColorStop(0.7, spec.color);
+      rg.addColorStop(1, 'rgba(10, 8, 20, 0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.r * 1.25, 0, 6.283);
+      ctx.fill();
+
+      if (c.burning) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(255, 150, 60,' + (0.25 + 0.2 * Math.random()).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r * 0.95, 0, 6.283);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      // Eyes: two embers that never blink.
+      ctx.fillStyle = c.burning ? '#ffd27d' : '#ff7a5c';
+      var ex = c.r * 0.36;
+      var ey = -c.r * 0.12;
+      ctx.beginPath();
+      ctx.arc(c.x - ex, c.y + ey, 1.9, 0, 6.283);
+      ctx.arc(c.x + ex, c.y + ey, 1.9, 0, 6.283);
+      ctx.fill();
+
+      // Health arc once hurt.
+      if (c.hp < c.maxHp) {
+        ctx.strokeStyle = 'rgba(255, 120, 90, 0.85)';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r + 4.5, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0, c.hp / c.maxHp));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawFx() {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < G.particles.length; i++) {
+      var p = G.particles[i];
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.font = '600 13px Georgia, serif';
+    ctx.textAlign = 'center';
+    for (var j = 0; j < G.floaters.length; j++) {
+      var f = G.floaters[j];
+      ctx.globalAlpha = Math.min(1, f.life);
+      ctx.fillStyle = '#ffd98f';
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.restore();
+  }
+
+  function drawHud() {
+    // Top bar.
+    ctx.fillStyle = 'rgba(6, 8, 18, 0.72)';
+    ctx.fillRect(0, 0, W, 40);
+    ctx.fillStyle = '#ffe9b8';
+    ctx.font = '600 16px Georgia, serif';
+    ctx.textAlign = 'left';
+    var phase = G.mode === 'shop' ? 'Dawn — Night ' + G.night + ' held' : 'Night ' + G.night + ' / ' + NIGHTS_TOTAL;
+    ctx.fillText(phase, 16, 26);
+
+    // Hearth health bar.
+    ctx.fillStyle = '#3a1620';
+    ctx.fillRect(170, 14, 190, 12);
+    var frac = Math.max(0, G.hearthHp / G.hearthMax);
+    ctx.fillStyle = frac > 0.35 ? '#ffb347' : '#ff6b5e';
+    ctx.fillRect(170, 14, 190 * frac, 12);
+    ctx.strokeStyle = '#6b5a3e';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(170, 14, 190, 12);
+    ctx.fillStyle = '#ffe9b8';
+    ctx.font = '12px Georgia, serif';
+    ctx.fillText('Hearth ' + Math.ceil(G.hearthHp) + '/' + G.hearthMax, 368, 25);
+
+    // Embers + shadows remaining.
+    ctx.textAlign = 'right';
+    ctx.font = '600 16px Georgia, serif';
+    ctx.fillStyle = '#ffd98f';
+    var left = G.spawnQueue.length + G.creatures.length;
+    ctx.fillText('◆ ' + G.embers + ' embers', W - 190, 26);
+    ctx.fillStyle = '#b9a8d8';
+    ctx.fillText('Shadows left: ' + left, W - 16, 26);
+    ctx.textAlign = 'left';
+
+    // Control hint along the bottom.
+    ctx.fillStyle = 'rgba(200, 205, 235, 0.5)';
+    ctx.font = '12.5px Georgia, serif';
+    var flareNote = G.time < G.flareUntil
+      ? 'FLARING!'
+      : (G.time < G.flareCdUntil
+        ? 'Flare ready in ' + Math.ceil(G.flareCdUntil - G.time) + 's'
+        : 'F = Flare (5 embers)');
+    ctx.fillText('Drag mirrors to move · Mouse wheel / Q E to rotate · Drag the lantern to aim · P pauses · ' + flareNote, 16, H - 12);
+  }
+
+  // -------------------------------------------------------------- loop
+  var lastTs = 0;
+  function frame(ts) {
+    if (!lastTs) lastTs = ts;
+    var dt = Math.min(0.05, (ts - lastTs) / 1000);
+    lastTs = ts;
+    if (dt > 0) {
+      G.time += dt;
+      update(dt);
+      draw();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // -------------------------------------------------------------- boot
+  function boot() {
+    cacheDom();
+    resetGame();
+    bindInput();
+    show(el.title, true);
+    show(el.shop, false);
+    show(el.end, false);
+    requestAnimationFrame(frame);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
